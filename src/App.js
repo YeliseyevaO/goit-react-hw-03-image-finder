@@ -3,7 +3,10 @@ import React from "react";
 import Searchbar from "./Components/Searchbar";
 import { fetchPhoto } from "./services/photo-api";
 import ImageGallery from "./Components/ImageGallery";
-import BeatLoader from "react-spinners/BeatLoader";
+import BildLoader from "./Components/Loader/Loader";
+import Button from "./Components/Button";
+import Modal from "./Components/Modal/Modal";
+import "./App.css";
 
 class App extends React.Component {
   state = {
@@ -12,17 +15,30 @@ class App extends React.Component {
     currentPage: 1,
     isLoading: false,
     error: null,
-  };
-
-  changePhoto = (query) => {
-    this.setState({ photoName: query });
+    showModal: false,
+    activePhoto: {},
   };
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.photoName !== this.state.photoName) {
       this.getPhoto();
     }
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "smooth",
+    });
+    if (
+      prevState.photoName !== this.state.photoName &&
+      this.state.photoList.length > 0
+    ) {
+      this.setState({ photoList: [], currentPage: 1 });
+    }
   }
+
+  changePhoto = (query) => {
+    this.setState({ photoName: query });
+  };
+
   getPhoto = () => {
     const { currentPage, photoName } = this.state;
     const options = { photoName, currentPage };
@@ -39,15 +55,35 @@ class App extends React.Component {
       .catch((error) => this.setState({ error }))
       .finally(() => this.setState({ isLoading: false }));
   };
+  findActivePhoto = (imgId) => {
+    this.setState((prevState) => ({
+      activePhoto: prevState.photoList.find((photo) => imgId === photo.id),
+    }));
+  };
+
+  toggleModal = () => {
+    this.setState(({ showModal }) => ({
+      showModal: !showModal,
+    }));
+  };
 
   render() {
-    const { photoList, isLoading } = this.state;
-
+    const { photoList, isLoading, showModal, activePhoto } = this.state;
+    const shouldRenderLoadMoreButton = photoList.length > 0 && !isLoading;
+    const { largeImageURL, tags } = activePhoto;
     return (
       <>
         <Searchbar onSubmit={this.changePhoto} />
-        <ImageGallery gallery={photoList} />
-        {isLoading && <BeatLoader size={30} />}
+        <ImageGallery
+          gallery={photoList}
+          onClose={this.toggleModal}
+          clickPhoto={this.findActivePhoto}
+        />
+        {isLoading && <BildLoader />}
+        {shouldRenderLoadMoreButton && <Button foundMore={this.getPhoto} />}
+        {showModal && (
+          <Modal onClose={this.toggleModal} crs={largeImageURL} alt={tags} />
+        )}
       </>
     );
   }
